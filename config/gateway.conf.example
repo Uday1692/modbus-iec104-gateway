@@ -1,0 +1,71 @@
+# Modbus-IEC104 Gateway Configuration File
+# This is an example configuration. Copy to gateway.conf and modify as needed.
+
+# Logging configuration
+log_level=INFO
+log_file=/var/log/gateway.log
+
+# Modbus Master Configuration
+[modbus]
+# Connection type: tcp or rtu
+type=tcp
+
+# For TCP connections
+host=127.0.0.1
+port=502
+
+# For RTU connections (uncomment if using serial)
+# device=/dev/ttyUSB0
+# baudrate=9600
+# parity=none
+# data_bits=8
+# stop_bits=1
+
+# Slave ID for RTU mode
+slave_id=1
+
+# Connection timeout (seconds)
+timeout=5
+
+# Polling interval (milliseconds)
+poll_interval=1000
+
+# IEC 104 Server Configuration
+[iec104]
+# Bind address and port
+bind_address=0.0.0.0
+port=2404
+
+# Maximum concurrent clients
+max_clients=10
+
+# APDU timeout (seconds)
+timeout=30
+
+# Data mapping configuration
+[mapping]
+# Format: modbus_address:iec104_ioa:data_type:read_interval
+# data_type: boolean, int16, uint16, int32, uint32, float
+# read_interval: 0 means use default poll_interval
+
+# Holding Registers -> Uint16
+0:1000:uint16:0
+1:1001:uint16:0
+2:1002:uint16:0
+3:1003:uint16:0
+4:1004:uint16:0
+
+# Coils -> Boolean
+0:2000:boolean:0
+1:2001:boolean:0
+2:2002:boolean:0
+3:2003:boolean:0
+4:2004:boolean:0
+
+# Input Registers -> Int16
+0:3000:int16:0
+1:3001:int16:0
+
+# Discrete Inputs -> Boolean
+0:4000:boolean:0
+1:4001:boolean:0

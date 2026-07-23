@@ -1,0 +1,45 @@
+# Multi-stage Docker build for ARM64 cross-compilation
+# Build: docker build -f Dockerfile.build-arm64 -t modbus-iec104-builder:latest .
+# Run: docker run --rm -v $(pwd):/workspace modbus-iec104-builder:latest
+
+FROM ubuntu:22.04
+
+# Set non-interactive mode
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    wget \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ARM64 cross-compilation toolchain
+RUN apt-get update && apt-get install -y \
+    crossbuild-essential-arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install libmodbus for ARM64
+RUN apt-get update && apt-get install -y \
+    libmodbus-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up build environment
+WORKDIR /workspace
+
+# Build script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Building for ARM64..."\n\
+mkdir -p build-arm64\n\
+cd build-arm64\n\
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain-arm64.cmake \\\n      -DCMAKE_BUILD_TYPE=Release \\\n      -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \\\n      ..\n\
+make -j$(nproc)\n\
+echo "Build complete! Binary: ./bin/gateway"\n\
+' > /build.sh && chmod +x /build.sh
+
+ENTRYPOINT ["/build.sh"]

@@ -1,0 +1,45 @@
+# Build directories
+build/
+build-arm64/
+cmake-build-debug/
+cmake-build-release/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Object files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Executables
+*.exe
+gateway
+gateway.exe
+
+# Dependencies
+/deps/
+/third_party/
+
+# Logs
+*.log
+
+# Configuration
+*.conf
+!config/gateway.conf.example
