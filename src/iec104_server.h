@@ -1,9 +1,6 @@
 /**
  * @file iec104_server.h
- * @brief IEC 104 Server Interface
- * 
- * This module provides functionality to serve data via IEC 104 protocol.
- * For now, this is a basic interface that will be implemented with libasdu.
+ * @brief IEC 104 Server Interface with Full Protocol Support
  */
 
 #ifndef IEC104_SERVER_H
@@ -11,19 +8,14 @@
 
 #include <stdint.h>
 #include <time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 typedef struct {
     char *bind_address;
     int port;
     int max_clients;
 } iec104_config_t;
-
-typedef struct iec104_server {
-    int listen_socket;
-    iec104_config_t config;
-    int running;
-    void *data_points;  /* List of data points */
-} iec104_server_t;
 
 typedef enum {
     IEC104_DT_BOOLEAN,
@@ -33,7 +25,7 @@ typedef enum {
 } iec104_data_type_t;
 
 typedef struct {
-    uint32_t ioa;  /* Information Object Address */
+    uint32_t ioa;              /* Information Object Address */
     iec104_data_type_t type;
     union {
         uint8_t boolean_val;
@@ -45,63 +37,83 @@ typedef struct {
     uint8_t quality;
 } iec104_data_point_t;
 
+typedef enum {
+    IEC104_CLIENT_CLOSED = 0,
+    IEC104_CLIENT_OPENING = 1,
+    IEC104_CLIENT_OPEN = 2,
+    IEC104_CLIENT_ACTIVE = 3
+} iec104_client_state_t;
+
+typedef struct {
+    int socket;
+    struct sockaddr_in addr;
+    iec104_client_state_t state;
+    uint16_t send_seq;         /* Send sequence number */
+    uint16_t recv_seq;         /* Receive sequence number */
+    uint8_t unconfirmed_count; /* Unconfirmed APDUs */
+    time_t last_activity;
+    uint8_t buffer[260];       /* Buffer for APDU data */
+    int buffer_len;
+} iec104_client_connection_t;
+
+typedef struct iec104_server {
+    int listen_socket;
+    iec104_config_t config;
+    int running;
+    
+    /* Client management */
+    iec104_client_connection_t *clients;
+    int client_count;
+    int max_clients;
+    
+    /* Data point storage */
+    iec104_data_point_t *data_points;
+    int data_point_count;
+    int data_point_capacity;
+} iec104_server_t;
+
 /**
  * Initialize IEC 104 server
- * @param config Configuration structure
- * @return Pointer to iec104_server_t or NULL on error
  */
 iec104_server_t *iec104_server_init(iec104_config_t *config);
 
 /**
- * Start IEC 104 server (non-blocking)
- * @param server IEC 104 server handle
- * @return 0 on success, -1 on error
+ * Start IEC 104 server
  */
 int iec104_server_start(iec104_server_t *server);
 
 /**
  * Stop IEC 104 server
- * @param server IEC 104 server handle
- * @return 0 on success, -1 on error
  */
 int iec104_server_stop(iec104_server_t *server);
 
 /**
- * Register a data point in the IEC 104 server
- * @param server IEC 104 server handle
- * @param point Data point to register
- * @return 0 on success, -1 on error
+ * Register a data point
  */
 int iec104_server_register_point(iec104_server_t *server, iec104_data_point_t *point);
 
 /**
  * Update a data point value
- * @param server IEC 104 server handle
- * @param ioa Information Object Address
- * @param value New value
- * @return 0 on success, -1 on error
  */
 int iec104_server_update_point(iec104_server_t *server, uint32_t ioa, iec104_data_point_t *value);
 
 /**
  * Get a data point value
- * @param server IEC 104 server handle
- * @param ioa Information Object Address
- * @param point Output data point
- * @return 0 on success, -1 on error
  */
 int iec104_server_get_point(iec104_server_t *server, uint32_t ioa, iec104_data_point_t *point);
 
 /**
- * Process server events (call in main loop)
- * @param server IEC 104 server handle
- * @return Number of events processed or -1 on error
+ * Process server events (accept connections, send/receive data)
  */
 int iec104_server_process(iec104_server_t *server);
 
 /**
- * Free IEC 104 server resources
- * @param server IEC 104 server handle
+ * Send data to all connected clients
+ */
+int iec104_server_broadcast_data(iec104_server_t *server, iec104_data_point_t *point);
+
+/**
+ * Free server resources
  */
 void iec104_server_free(iec104_server_t *server);
 
