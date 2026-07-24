@@ -51,12 +51,14 @@ message(STATUS "Found libmodbus at ${MODBUS_INCLUDE_DIRS}")
 set(SOURCES
     src/main.c
     src/modbus_master.c
+    src/iec104_protocol.c
     src/iec104_server.c
     src/gateway.c
 )
 
 set(HEADERS
     src/modbus_master.h
+    src/iec104_protocol.h
     src/iec104_server.h
 )
 
@@ -87,4 +89,5 @@ message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "  Modbus Include: ${MODBUS_INCLUDE_DIRS}")
 message(STATUS "  Modbus Libraries: ${MODBUS_LIBRARIES}")
+message(STATUS "  Sources: ${SOURCES}")
 message(STATUS "")
