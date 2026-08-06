@@ -53,6 +53,7 @@ set(SOURCES
     src/modbus_master.c
     src/iec104_protocol.c
     src/iec104_server.c
+    src/config_parser.c
     src/gateway.c
 )
 
@@ -60,6 +61,7 @@ set(HEADERS
     src/modbus_master.h
     src/iec104_protocol.h
     src/iec104_server.h
+    src/config_parser.h
 )
 
 # Create executable

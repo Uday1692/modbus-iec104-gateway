@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <modbus.h>
 #include "modbus_master.h"
 
@@ -34,7 +35,7 @@ modbus_device_t *modbus_master_init(modbus_config_t *config)
     device->last_read = 0;
 
     /* Create Modbus context based on configuration */
-    if (config->device) {
+    if (config->device[0] != '\0') {
         /* RTU mode */
         device->ctx = modbus_new_rtu(
             config->device,
@@ -43,7 +44,7 @@ modbus_device_t *modbus_master_init(modbus_config_t *config)
             config->data_bits,
             config->stop_bits
         );
-    } else if (config->host && config->port > 0) {
+    } else if (config->host[0] != '\0' && config->port > 0) {
         /* TCP mode */
         device->ctx = modbus_new_tcp(config->host, config->port);
     } else {
@@ -77,13 +78,19 @@ int modbus_master_connect(modbus_device_t *device)
         return -1;
     }
 
+    if (modbus_set_slave(device->ctx, device->config.slave_id) == -1) {
+        fprintf(stderr, "Error: modbus_set_slave failed - %s\n", modbus_strerror(errno));
+        return -1;
+    }
+
     if (modbus_connect(device->ctx) == -1) {
         fprintf(stderr, "Error: Connection failed - %s\n", modbus_strerror(errno));
+        device->connected = 0;
         return -1;
     }
 
     device->connected = 1;
-    printf("Modbus connection established\n");
+    printf("Modbus connection established (slave=%d)\n", device->config.slave_id);
     return 0;
 }
 
@@ -119,6 +126,8 @@ int modbus_master_read_coils(modbus_device_t *device, int address, int count, ui
     int result = modbus_read_bits(device->ctx, address, count, values);
     if (result == -1) {
         fprintf(stderr, "Error: Failed to read coils - %s\n", modbus_strerror(errno));
+        modbus_close(device->ctx);
+        device->connected = 0;
         return -1;
     }
 
@@ -139,6 +148,8 @@ int modbus_master_read_discrete_inputs(modbus_device_t *device, int address, int
     int result = modbus_read_input_bits(device->ctx, address, count, values);
     if (result == -1) {
         fprintf(stderr, "Error: Failed to read discrete inputs - %s\n", modbus_strerror(errno));
+        modbus_close(device->ctx);
+        device->connected = 0;
         return -1;
     }
 
@@ -159,6 +170,8 @@ int modbus_master_read_holding_registers(modbus_device_t *device, int address, i
     int result = modbus_read_registers(device->ctx, address, count, values);
     if (result == -1) {
         fprintf(stderr, "Error: Failed to read holding registers - %s\n", modbus_strerror(errno));
+        modbus_close(device->ctx);
+        device->connected = 0;
         return -1;
     }
 
@@ -179,6 +192,8 @@ int modbus_master_read_input_registers(modbus_device_t *device, int address, int
     int result = modbus_read_input_registers(device->ctx, address, count, values);
     if (result == -1) {
         fprintf(stderr, "Error: Failed to read input registers - %s\n", modbus_strerror(errno));
+        modbus_close(device->ctx);
+        device->connected = 0;
         return -1;
     }
 
@@ -221,6 +236,25 @@ int modbus_master_write_register(modbus_device_t *device, int address, uint16_t 
         return -1;
     }
 
+    return 0;
+}
+
+/**
+ * Set Modbus slave ID
+ */
+int modbus_master_set_slave(modbus_device_t *device, int slave_id)
+{
+    if (!device || !device->ctx) {
+        fprintf(stderr, "Error: Invalid device\n");
+        return -1;
+    }
+
+    if (modbus_set_slave(device->ctx, slave_id) == -1) {
+        fprintf(stderr, "Error: modbus_set_slave failed - %s\n", modbus_strerror(errno));
+        return -1;
+    }
+
+    device->config.slave_id = slave_id;
     return 0;
 }
 

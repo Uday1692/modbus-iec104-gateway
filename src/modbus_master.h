@@ -12,13 +12,14 @@
 #include <time.h>
 
 typedef struct {
-    char *host;
+    char host[64];
+    char device[64];
     int port;
-    char *device;
     int baudrate;
-    int parity;
+    char parity;
     int data_bits;
     int stop_bits;
+    int slave_id;
 } modbus_config_t;
 
 typedef struct modbus_device {
@@ -113,6 +114,14 @@ int modbus_master_write_coil(modbus_device_t *device, int address, int value);
  * @return 0 on success, -1 on error
  */
 int modbus_master_write_register(modbus_device_t *device, int address, uint16_t value);
+
+/**
+ * Set Modbus slave ID
+ * @param device Modbus device handle
+ * @param slave_id Slave ID
+ * @return 0 on success, -1 on error
+ */
+int modbus_master_set_slave(modbus_device_t *device, int slave_id);
 
 /**
  * Free Modbus device resources

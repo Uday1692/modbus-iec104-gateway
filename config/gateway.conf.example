@@ -44,28 +44,29 @@ timeout=30
 
 # Data mapping configuration
 [mapping]
-# Format: modbus_address:iec104_ioa:data_type:read_interval
+# Format: modbus_address:iec104_ioa:data_type:read_interval[:modbus_function][:scale][:offset]
 # data_type: boolean, int16, uint16, int32, uint32, float
+# modbus_function: 1=coil, 2=discrete_input, 3=holding_register, 4=input_register
 # read_interval: 0 means use default poll_interval
 
 # Holding Registers -> Uint16
-0:1000:uint16:0
-1:1001:uint16:0
-2:1002:uint16:0
-3:1003:uint16:0
-4:1004:uint16:0
+0:1000:uint16:0:3
+1:1001:uint16:0:3
+2:1002:uint16:0:3
+3:1003:uint16:0:3
+4:1004:uint16:0:3
 
 # Coils -> Boolean
-0:2000:boolean:0
-1:2001:boolean:0
-2:2002:boolean:0
-3:2003:boolean:0
-4:2004:boolean:0
+0:2000:boolean:0:1
+1:2001:boolean:0:1
+2:2002:boolean:0:1
+3:2003:boolean:0:1
+4:2004:boolean:0:1
 
 # Input Registers -> Int16
-0:3000:int16:0
-1:3001:int16:0
+0:3000:int16:0:4
+1:3001:int16:0:4
 
 # Discrete Inputs -> Boolean
-0:4000:boolean:0
-1:4001:boolean:0
+0:4000:boolean:0:2
+1:4001:boolean:0:2
