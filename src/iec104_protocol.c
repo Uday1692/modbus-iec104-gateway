@@ -68,8 +68,7 @@ int iec104_encode_s_apdu(uint8_t *buffer, uint16_t recv_seq)
 int iec104_encode_u_apdu(uint8_t *buffer, uint8_t function)
 {
     if (!buffer) return -1;
-    if (function > 0xFF) return -1;
-    
+
     buffer[0] = IEC104_APCI_START;
     buffer[1] = 4;  /* APDU length */
     buffer[2] = function;  /* U-format function in bits 4-7, bits 1,0 = 11 */
@@ -85,7 +84,7 @@ int iec104_encode_u_apdu(uint8_t *buffer, uint8_t function)
  */
 int iec104_encode_spi(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                       uint32_t ioa, uint8_t value, uint8_t quality,
-                      uint16_t common_address)
+                      uint16_t common_address, uint8_t cause_tx)
 {
     if (!buffer) return -1;
     
@@ -97,7 +96,7 @@ int iec104_encode_spi(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
     /* ASDU header */
     buffer[offset++] = IEC104_M_SP_NA_1;  /* Type ID */
     buffer[offset++] = 0x01;               /* SQ=0, Number of elements=1 */
-    buffer[offset++] = IEC104_COT_SPONTANEOUS;  /* Cause of Transmission */
+    buffer[offset++] = cause_tx;           /* Cause of Transmission */
     buffer[offset++] = 0x00;               /* Originator */
     buffer[offset++] = (common_address & 0xFF);
     buffer[offset++] = ((common_address >> 8) & 0xFF);
@@ -119,23 +118,23 @@ int iec104_encode_spi(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
 }
 
 /**
- * Encode Measured Value Normalized (M_ME_NA_1)
+ * Encode Measured Value Scaled (M_ME_NB_1)
  */
-int iec104_encode_me_na_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
+int iec104_encode_me_nb_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                           uint32_t ioa, uint16_t value, uint8_t quality,
-                          uint16_t common_address)
+                          uint16_t common_address, uint8_t cause_tx)
 {
     if (!buffer) return -1;
-    
+
     int offset = 0;
-    
+
     /* APDU header */
     offset += 6;
-    
+
     /* ASDU header */
-    buffer[offset++] = IEC104_M_ME_NA_1;  /* Type ID */
+    buffer[offset++] = IEC104_M_ME_NB_1;  /* Type ID */
     buffer[offset++] = 0x01;               /* SQ=0, Number of elements=1 */
-    buffer[offset++] = IEC104_COT_SPONTANEOUS;
+    buffer[offset++] = cause_tx;
     buffer[offset++] = 0x00;
     buffer[offset++] = (common_address & 0xFF);
     buffer[offset++] = ((common_address >> 8) & 0xFF);
@@ -159,23 +158,23 @@ int iec104_encode_me_na_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
 }
 
 /**
- * Encode Measured Value Floating Point (M_ME_TF_1)
+ * Encode Measured Value Short Floating Point (M_ME_NC_1)
  */
-int iec104_encode_me_tf_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
+int iec104_encode_me_nc_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                           uint32_t ioa, float value, uint8_t quality,
-                          uint16_t common_address)
+                          uint16_t common_address, uint8_t cause_tx)
 {
     if (!buffer) return -1;
-    
+
     int offset = 0;
-    
+
     /* APDU header */
     offset += 6;
-    
+
     /* ASDU header */
-    buffer[offset++] = IEC104_M_ME_TF_1;  /* Type ID */
+    buffer[offset++] = IEC104_M_ME_NC_1;  /* Type ID */
     buffer[offset++] = 0x01;              /* SQ=0, Number of elements=1 */
-    buffer[offset++] = IEC104_COT_SPONTANEOUS;
+    buffer[offset++] = cause_tx;
     buffer[offset++] = 0x00;
     buffer[offset++] = (common_address & 0xFF);
     buffer[offset++] = ((common_address >> 8) & 0xFF);
@@ -185,12 +184,13 @@ int iec104_encode_me_tf_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
     buffer[offset++] = ((ioa >> 8) & 0xFF);
     buffer[offset++] = ((ioa >> 16) & 0xFF);
     
-    /* Measured value (32-bit float) */
-    uint32_t *fvalue = (uint32_t *)&value;
-    buffer[offset++] = (*fvalue & 0xFF);
-    buffer[offset++] = ((*fvalue >> 8) & 0xFF);
-    buffer[offset++] = ((*fvalue >> 16) & 0xFF);
-    buffer[offset++] = ((*fvalue >> 24) & 0xFF);
+    /* Measured value (32-bit float), little-endian per IEC 60870-5-101/104 */
+    uint32_t fvalue;
+    memcpy(&fvalue, &value, sizeof(fvalue));
+    buffer[offset++] = (fvalue & 0xFF);
+    buffer[offset++] = ((fvalue >> 8) & 0xFF);
+    buffer[offset++] = ((fvalue >> 16) & 0xFF);
+    buffer[offset++] = ((fvalue >> 24) & 0xFF);
     
     /* Quality descriptor */
     buffer[offset++] = quality;
@@ -252,12 +252,12 @@ int iec104_get_apdu_type(const uint8_t *buffer)
 }
 
 /**
- * Get U-format function code
+ * Get U-format function code (full control field byte)
  */
 int iec104_get_u_function(const uint8_t *buffer)
 {
     if (!buffer) return -1;
     if (iec104_get_apdu_type(buffer) != IEC104_APDU_U) return -1;
-    
-    return (buffer[2] & 0xFC);  /* Bits 2-7 contain function */
+
+    return buffer[2];
 }

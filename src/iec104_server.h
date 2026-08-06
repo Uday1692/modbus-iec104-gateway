@@ -8,13 +8,15 @@
 
 #include <stdint.h>
 #include <time.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
 typedef struct {
-    char *bind_address;
+    char bind_address[64];
     int port;
     int max_clients;
+    int common_address;
 } iec104_config_t;
 
 typedef enum {
@@ -70,6 +72,8 @@ typedef struct iec104_server {
     iec104_data_point_t *data_points;
     int data_point_count;
     int data_point_capacity;
+
+    pthread_mutex_t lock;
 } iec104_server_t;
 
 /**

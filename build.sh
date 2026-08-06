@@ -9,21 +9,28 @@ mkdir -p build
 cd build
 rm -rf *
 
-echo "[1/4] Compiling modbus_master.c..."
-zig cc -O2 -c ../src/modbus_master.c -I../src -o modbus_master.o
+# Find libmodbus include directory
+MODBUS_INCLUDE=""
+if pkg-config --exists libmodbus 2>/dev/null; then
+    MODBUS_INCLUDE=$(pkg-config --cflags libmodbus)
+fi
 
-echo "[2/4] Compiling iec104_server.c..."
-zig cc -O2 -c ../src/iec104_server.c -I../src -o iec104_server.o
-
-echo "[3/4] Compiling gateway.c..."
-zig cc -O2 -c ../src/gateway.c -I../src -o gateway.o
-
-echo "[4/4] Compiling main.c..."
-zig cc -O2 -c ../src/main.c -I../src -o main.o
+zig cc -O2 -c ../src/modbus_master.c -I../src ${MODBUS_INCLUDE} -o modbus_master.o
+zig cc -O2 -c ../src/iec104_protocol.c -I../src ${MODBUS_INCLUDE} -o iec104_protocol.o
+zig cc -O2 -c ../src/iec104_server.c -I../src ${MODBUS_INCLUDE} -o iec104_server.o
+zig cc -O2 -c ../src/config_parser.c -I../src ${MODBUS_INCLUDE} -o config_parser.o
+zig cc -O2 -c ../src/gateway.c -I../src ${MODBUS_INCLUDE} -o gateway.o
+zig cc -O2 -c ../src/main.c -I../src ${MODBUS_INCLUDE} -o main.o
 
 echo "Linking executable..."
-zig cc -o gateway modbus_master.o iec104_server.o gateway.o main.o -lmodbus -lpthread -lm
+MODBUS_LIB=""
+if pkg-config --exists libmodbus 2>/dev/null; then
+    MODBUS_LIB=$(pkg-config --libs libmodbus)
+else
+    MODBUS_LIB="-lmodbus"
+fi
+zig cc -o gateway modbus_master.o iec104_protocol.o iec104_server.o config_parser.o gateway.o main.o ${MODBUS_LIB} -lpthread -lm
 
 echo ""
-echo "✓ Build complete!"
+echo "Build complete!"
 echo "Binary: ./build/gateway"

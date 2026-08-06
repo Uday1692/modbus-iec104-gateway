@@ -45,17 +45,18 @@
 #define IEC104_M_DP_NA_1 3      /* Double-point information */
 #define IEC104_M_DP_TA_1 4      /* Double-point with timestamp */
 #define IEC104_M_ST_NA_1 5      /* Step position information */
-#define IEC104_M_ME_NA_1 9      /* Measured value (normalized) */
-#define IEC104_M_ME_TF_1 11     /* Measured value (floating point) */
-#define IEC104_M_IT_NA_1 15     /* Integrated totals */
+#define IEC104_M_ME_NA_1 9      /* Measured value, normalized without time */
+#define IEC104_M_ME_NB_1 11     /* Measured value, scaled without time */
+#define IEC104_M_ME_NC_1 13     /* Measured value, short floating point without time */
+#define IEC104_M_IT_NA_1 15     /* Integrated totals without time */
 #define IEC104_M_PS_NA_1 20     /* Packed single point */
-#define IEC104_M_ME_ND_1 21     /* Measured value (scaled) */
 #define IEC104_M_SP_TB_1 30     /* Single-point with timestamp */
 #define IEC104_M_DP_TB_1 31     /* Double-point with timestamp */
 #define IEC104_M_ST_TB_1 32     /* Step position with timestamp */
-#define IEC104_M_ME_TD_1 34     /* Measured value (floating) with timestamp */
-#define IEC104_M_ME_TE_1 35     /* Measured value (scaled) with timestamp */
-#define IEC104_M_IT_TB_1 36     /* Integrated totals with timestamp */
+#define IEC104_M_ME_TD_1 34     /* Measured value, normalized with timestamp */
+#define IEC104_M_ME_TE_1 35     /* Measured value, scaled with timestamp */
+#define IEC104_M_ME_TF_1 36     /* Measured value, short floating point with timestamp */
+#define IEC104_M_IT_TB_1 37     /* Integrated totals with timestamp */
 
 /* Qualifier of Information (QoI) */
 #define IEC104_QOI_STATION 20   /* Station interrogation */
@@ -91,14 +92,27 @@
 #define IEC104_COT_UNKNOWN_COMMON_ADDRESS 23
 #define IEC104_COT_UNKNOWN_ASDU_ADDRESS 24
 
+/* Command TypeIDs */
+#define IEC104_C_IC_NA_1 100   /* Interrogation command */
+#define IEC104_C_SC_NA_1 45     /* Single command */
+#define IEC104_C_DC_NA_1 46     /* Double command */
+#define IEC104_C_SE_NA_1 48     /* Set-point command, normalized value */
+
 /* APDU Structures */
-packed_t struct {
+/* Packed attribute helper */
+#ifdef __GNUC__
+#define IEC104_PACKED __attribute__((packed))
+#else
+#define IEC104_PACKED
+#endif
+
+typedef struct IEC104_PACKED {
     uint8_t start_byte;          /* 0x68 */
     uint8_t length;              /* APDU length (without start and length bytes) */
     uint8_t control_field[4];    /* Control bytes */
 } iec104_apdu_header_t;
 
-packed_t struct {
+typedef struct IEC104_PACKED {
     uint8_t type_id;             /* ASDU Type Identification */
     uint8_t sq_num_elements;     /* SQ (1) + Number of Elements (7) */
     uint8_t cause_tx;            /* Cause of Transmission */
@@ -107,21 +121,21 @@ packed_t struct {
 } iec104_asdu_header_t;
 
 /* Single Point Information (M_SP_NA_1) */
-packed_t struct {
+typedef struct IEC104_PACKED {
     uint8_t spi;                 /* SPI value (1 bit) + Quality (7 bits) */
 } iec104_spi_t;
 
 /* Measured Value Normalized (M_ME_NA_1) */
-packed_t struct {
+typedef struct IEC104_PACKED {
     uint16_t value;              /* 16-bit normalized value */
     uint8_t quality;             /* Quality descriptor */
 } iec104_me_na_1_t;
 
-/* Measured Value Floating Point (M_ME_TF_1) */
-packed_t struct {
+/* Measured Value Short Floating Point (M_ME_NC_1) */
+typedef struct IEC104_PACKED {
     float value;                 /* 32-bit float */
     uint8_t quality;             /* Quality descriptor */
-} iec104_me_tf_1_t;
+} iec104_me_nc_1_t;
 
 /* Client connection state */
 typedef enum {
@@ -153,17 +167,17 @@ int iec104_encode_u_apdu(uint8_t *buffer, uint8_t function);
 /* Encode I-format APDU with single point */
 int iec104_encode_spi(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                       uint32_t ioa, uint8_t value, uint8_t quality,
-                      uint16_t common_address);
+                      uint16_t common_address, uint8_t cause_tx);
 
-/* Encode I-format APDU with measured value */
-int iec104_encode_me_na_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
+/* Encode I-format APDU with scaled 16-bit measured value (M_ME_NB_1) */
+int iec104_encode_me_nb_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                           uint32_t ioa, uint16_t value, uint8_t quality,
-                          uint16_t common_address);
+                          uint16_t common_address, uint8_t cause_tx);
 
-/* Encode I-format APDU with floating point */
-int iec104_encode_me_tf_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
+/* Encode I-format APDU with short floating point (M_ME_NC_1) */
+int iec104_encode_me_nc_1(uint8_t *buffer, uint16_t send_seq, uint16_t recv_seq,
                           uint32_t ioa, float value, uint8_t quality,
-                          uint16_t common_address);
+                          uint16_t common_address, uint8_t cause_tx);
 
 /* Decode APDU */
 int iec104_decode_apdu(const uint8_t *buffer, int length, uint16_t *send_seq, uint16_t *recv_seq);
